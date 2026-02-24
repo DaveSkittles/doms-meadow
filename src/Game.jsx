@@ -6,6 +6,7 @@ import * as Tone from "tone";
 const SPD=0.06,SPRINT_SPD=0.10,JMP=0.18,GRV=0.005;
 const MAX_JUMPS=2,COYOTE=6,JUMP_BUF=6;
 const CAM_D=6,CAM_S=0.08,MS=0.003,PMIN=-0.15,PMAX=1.3,PR=0.2,PH=0.7;
+const AUTO_CAM_SPD=0.03,AUTO_CAM_DELAY=90;
 const STEP=1.5,HALF=STEP/2;
 const CHAR_FOOT=0.17;
 
@@ -416,7 +417,7 @@ function GC(){
   const [showHints,setShowHints]=useState(true);
   const collectedRef=useRef(new Set());
   const S=useRef({md:false,dx:0,dy:0,yaw:0,pitch:.45,vy:0,px:0,py:0,pz:2,gnd:true,t:0,mv:false,
-    jumps:0,coyote:0,jumpBuf:0,sprint:false,walkCycle:0,inWater:false,landSquash:0}).current;
+    jumps:0,coyote:0,jumpBuf:0,sprint:false,walkCycle:0,inWater:false,landSquash:0,manualT:999}).current;
 
   // Fade out control hints after 8 seconds
   useEffect(()=>{const t=setTimeout(()=>setShowHints(false),8000);return()=>clearTimeout(t);},[]);
@@ -597,7 +598,8 @@ function GC(){
     const animate=()=>{
       raf=requestAnimationFrame(animate);S.t+=.016;
 
-      // Camera
+      // Camera — detect manual input for auto-follow override
+      if(S.dx!==0||S.dy!==0)S.manualT=0;else if(S.manualT<AUTO_CAM_DELAY)S.manualT++;
       S.yaw-=S.dx*MS;S.pitch+=S.dy*MS;S.pitch=Math.max(PMIN,Math.min(PMAX,S.pitch));S.dx=0;S.dy=0;
       sky.material.uniforms.time.value=S.t;
 
@@ -764,6 +766,12 @@ function GC(){
         p.material.opacity=Math.max(0,1-p.userData.life);
         const s=Math.max(.01,1-p.userData.life*.8);p.scale.set(s,s,s);
         if(p.userData.life>1){sc.remove(p);p.geometry.dispose?.();p.material.dispose();collParticles.splice(i,1);}
+      }
+
+      // Auto-follow camera — gently orbit behind character while moving
+      if(S.mv&&S.manualT>=AUTO_CAM_DELAY){
+        const tgt=chr.rotation.y+Math.PI;
+        S.yaw+=Math.atan2(Math.sin(tgt-S.yaw),Math.cos(tgt-S.yaw))*AUTO_CAM_SPD;
       }
 
       // Camera
