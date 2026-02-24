@@ -572,9 +572,10 @@ function GC(){
     Tone.getTransport().bpm.value=72;Tone.getTransport().start();
 
     // Input
-    const clearKeys=()=>{for(const k in keys)keys[k]=false;S.md=false;};
-    const onKD=e=>{const k=e.key.toLowerCase();keys[k]=true;if(e.key==="Shift")S.sprint=true;if(k===" "||k.startsWith("arrow"))e.preventDefault();};
-    const onKU=e=>{keys[e.key.toLowerCase()]=false;if(e.key==="Shift")S.sprint=false;};
+    const clearKeys=()=>{for(const k in keys)keys[k]=false;S.md=false;S.sprint=false;};
+    let lastKeyT=performance.now();
+    const onKD=e=>{const k=e.key.toLowerCase();keys[k]=true;lastKeyT=performance.now();if(e.key==="Shift")S.sprint=true;if(k===" "||k.startsWith("arrow"))e.preventDefault();};
+    const onKU=e=>{keys[e.key.toLowerCase()]=false;lastKeyT=performance.now();if(e.key==="Shift")S.sprint=false;};
     const onMD=e=>{if(e.button===0||e.button===2){S.md=true;ren.domElement.requestPointerLock?.();}};
     const onMU=()=>{S.md=false;document.exitPointerLock?.();};
     const onMM=e=>{if(document.pointerLockElement===ren.domElement||S.md){S.dx+=e.movementX;S.dy+=e.movementY;}};
@@ -597,6 +598,10 @@ function GC(){
     let raf;const tv=new THREE.Vector3();
     const animate=()=>{
       raf=requestAnimationFrame(animate);S.t+=.016;
+
+      // Guard against stuck keys — clear if window lost focus or no keyboard events for 2 s while moving
+      if(!document.hasFocus())clearKeys();
+      if(S.mv&&performance.now()-lastKeyT>2000)clearKeys();
 
       // Camera — detect manual input for auto-follow override
       if(S.dx!==0||S.dy!==0)S.manualT=0;else if(S.manualT<AUTO_CAM_DELAY)S.manualT++;
