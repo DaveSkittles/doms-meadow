@@ -1,0 +1,15 @@
+node_modules
+dist
+.DS_Store
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# Original pre-refactor file (superseded by src/Game.jsx)
+game.jsx
+
+# Dev screenshots
+*.png
+*.jpg
+*.jpeg
+context.md
